@@ -6,5 +6,5 @@ simplejson
 statistics
 matplotlib
 requests
-Python-IO
+Python-IO==0.3
 os-sys
