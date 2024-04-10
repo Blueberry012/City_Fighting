@@ -2,4 +2,6 @@ pandas
 streamlit
 folium
 streamlit_folium
-plotly.express
+json
+statistics
+matplotlib
