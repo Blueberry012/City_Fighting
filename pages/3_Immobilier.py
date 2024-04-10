@@ -4,6 +4,9 @@ import folium
 from streamlit_folium import st_folium
 import statistics
 import matplotlib.pyplot as plt
+import requests
+from io import StringIO
+import os
 
 
 df = pd.read_excel('data\data_immobilier.xlsx')
@@ -79,6 +82,30 @@ def main():
                 code=ville1[-6:-4]
                 vil=ville1[-6:-1]
                 csv_filename = f'data\immobilier\dvf_departement_{code}.csv'
+
+                if os.path.exists(csv_filename):
+                    print('existe deja')
+                else:
+                    # URL de base pour le téléchargement des fichiers CSV
+                    url_base = "https://dvf-api.data.gouv.fr/dvf/csv/?dep="
+
+
+                    url = f"{url_base}{code}"
+                    response = requests.get(url)
+                    if response.ok and response.content:
+                        try:
+                            # Création d'un DataFrame à partir des données téléchargées
+                            data = pd.read_csv(StringIO(response.content.decode('utf-8')))
+                            # Sauvegarde du DataFrame en CSV
+                            csv_filename = f'data\immobilier\dvf_departement_{code}.csv'
+                            data.to_csv(csv_filename, index=False)
+                            print(f"Téléchargé et sauvegardé : {csv_filename}")
+                        except pd.errors.EmptyDataError:
+                            print(f"Aucune donnée à lire pour le département {code}")
+                    else:
+                        print(f"Erreur lors du téléchargement pour le département {code}")
+
+                
                 center1, zoom1, ville_data1, rad1 = Ville(df, ville1)
                 
                 dfbis = pd.read_csv(csv_filename, sep=',')
@@ -190,6 +217,29 @@ def main():
                 code=ville2[-6:-4]
                 vil=ville2[-6:-1]
                 csv_filename = f'data\immobilier\dvf_departement_{code}.csv'
+
+                if os.path.exists(csv_filename):
+                    print('existe deja')
+                else:
+                    # URL de base pour le téléchargement des fichiers CSV
+                    url_base = "https://dvf-api.data.gouv.fr/dvf/csv/?dep="
+
+
+                    url = f"{url_base}{code}"
+                    response = requests.get(url)
+                    if response.ok and response.content:
+                        try:
+                            # Création d'un DataFrame à partir des données téléchargées
+                            data = pd.read_csv(StringIO(response.content.decode('utf-8')))
+                            # Sauvegarde du DataFrame en CSV
+                            csv_filename = f'data\immobilier\dvf_departement_{code}.csv'
+                            data.to_csv(csv_filename, index=False)
+                            print(f"Téléchargé et sauvegardé : {csv_filename}")
+                        except pd.errors.EmptyDataError:
+                            print(f"Aucune donnée à lire pour le département {code}")
+                    else:
+                        print(f"Erreur lors du téléchargement pour le département {code}")
+
                 center2, zoom2, ville_data2, rad2 = Ville(df, ville2)
                 
                 dfbis = pd.read_csv(csv_filename, sep=',')
@@ -301,6 +351,29 @@ def main():
             code=ville[-6:-4]
             vil=ville[-6:-1]
             csv_filename = f'data\immobilier\dvf_departement_{code}.csv'
+
+            if os.path.exists(csv_filename):
+                print('existe deja')
+            else:
+                # URL de base pour le téléchargement des fichiers CSV
+                url_base = "https://dvf-api.data.gouv.fr/dvf/csv/?dep="
+
+
+                url = f"{url_base}{code}"
+                response = requests.get(url)
+                if response.ok and response.content:
+                    try:
+                        # Création d'un DataFrame à partir des données téléchargées
+                        data = pd.read_csv(StringIO(response.content.decode('utf-8')))
+                        # Sauvegarde du DataFrame en CSV
+                        csv_filename = f'data\immobilier\dvf_departement_{code}.csv'
+                        data.to_csv(csv_filename, index=False)
+                        print(f"Téléchargé et sauvegardé : {csv_filename}")
+                    except pd.errors.EmptyDataError:
+                        print(f"Aucune donnée à lire pour le département {code}")
+                else:
+                    print(f"Erreur lors du téléchargement pour le département {code}")
+
             center, zoom, ville_data, rad = Ville(df, ville)
             
             dfbis = pd.read_csv(csv_filename, sep=',')
