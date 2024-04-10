@@ -7,4 +7,4 @@ statistics
 matplotlib
 requests
 requires.io
-os
+os-sys
