@@ -6,5 +6,5 @@ simplejson
 statistics
 matplotlib
 requests
-io
+requires.io
 os
