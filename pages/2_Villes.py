@@ -2,26 +2,13 @@ import pandas as pd
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-import json
-
 
 
 # Charger les données à partir du fichier CSV
-df1 = pd.read_excel('data\data_departement.xlsx')
-df1[['Latitude', 'Longitude']] = df1['Geo Point'].str.split(', ', expand=True)
-df1.dropna(subset=['Latitude'], inplace=True)
-df1.dropna(subset=['Longitude'], inplace=True)
-#df1 = df1[df1['Population'] >= 25000]
-
-df_meteo = pd.read_excel('data\meteo.xlsx')
-for col in df_meteo.columns:
-    df_meteo = df_meteo[df_meteo[col] != 0]
-#df_meteo.dropna(subset=['department (code)'], inplace=True)
-
-df = pd.merge(df1, df_meteo, left_on='Code', right_on='department (code)', how='left')
-#df=df1
-data_geo = json.load(open('data\departements.geojson', encoding='utf-8'))
-
+df = pd.read_excel('data\data_ville.xlsx')
+df.dropna(subset=['Latitude'], inplace=True)
+df.dropna(subset=['Longitude'], inplace=True)
+#df = df[df['Population'] >= 25000]
 
 st.set_page_config(layout="wide")
 
@@ -35,11 +22,23 @@ def France(dataframe):
 
 
 def Ville(dataframe, ville):
-    ville_data = dataframe[dataframe['Département'] == ville]
+    ville_data = dataframe[dataframe['Ville'] == ville]
     center = [ville_data['Latitude'].mean(), ville_data['Longitude'].mean()]
-    zoom = 9
+    zoom = 13
     rad = 50
     return center, zoom, ville_data, rad
+
+
+def circle_marker(map, row, rad, icon_color, popup):
+    folium.CircleMarker(location=[row['Latitude'], row['Longitude']],
+                        stroke=False,
+                        radius=rad,
+                        color=icon_color,
+                        fill=True,
+                        fill_color=icon_color,
+                        fill_opacity=0.7,
+                        popup=popup,
+                        icon=folium.Icon(color=icon_color, icon='')).add_to(map)
 
 
 def display_kpi_metrics2(ville_data, indicateur):
@@ -130,21 +129,20 @@ def display_kpi_metrics3(ville_data, indicateur):
 
 
 def main():
-    st.markdown("<h1 style='text-align: center;'>Carte Département</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Carte Ville</h1>", unsafe_allow_html=True)
 
     versus = st.sidebar.toggle('Versus')
 
-    marker = st.sidebar.checkbox('Marker')
-
-    departements = df['Département'].tolist()
-    departements = sorted(departements)
-    departements.insert(0, "France")
+    villes = df['Ville'].tolist()
+    villes = sorted(villes)
+    villes.insert(0, "France")
 
     df['Latitude'] = df['Latitude'].astype(float)
     df['Longitude'] = df['Longitude'].astype(float)
 
 
-    domaine = ["Démographie","Economie","Emploi","Education","Mobilité","Logement","Services","Météo"]
+
+    domaine = ["Démographie","Economie","Emploi","Education","Mobilité","Logement","Services"]
     selected_domaine = st.sidebar.selectbox('Choisir un domaine', domaine)
     data1=df
 
@@ -170,8 +168,10 @@ def main():
     elif selected_domaine =="Emploi":
         indicateur = ["Nombre d'actifs",
                       "Nombre d'inactifs",
+                      "Nombre d'actifs occupés de 15-64 ans",
                       "Nombre de chômeurs",
                       "Taux d'activité des 15-64 ans",
+                      "Taux d'emploi des 15-64 ans",
                       "Taux de chômage des 15-64 ans"]
 
 
@@ -187,45 +187,33 @@ def main():
         indicateur = ["Nombre d'écoles maternelles",
                       "Nombre d'écoles élémentaires",
                       "Nombre de lycées (général, technologique et/ou professionnel)",
+                      "Effectif des établissements d'enseignement supérieur",
                       "Part des titulaires d'un diplôme de l'enseignement supérieur"]
 
     
     elif selected_domaine =="Mobilité":
         indicateur = ["Part des déplacements en voiture",
                       "Part des déplacements en transports en commun",
-                      "Part des déplacements en deux roues"]
+                      "Part des déplacements en deux roues",
+                      "Proportion d'actifs occupés résidant à 30 minutes ou plus de leur lieu de travail"]
 
     
     elif selected_domaine =="Logement":
         indicateur = ["Nombre de logements",
                       "Nombre de logements vacants",
                       "Part des logements vacants",
-                      "Nombre de logements sociaux",
-                      "Nombre d'établissements d'hébergement pour personnes âgées"]
+                      "Loyer d'annonce par m² pour un appartement",
+                      "Loyer d'annonce par m² pour une maison"]
 
     
     elif selected_domaine =="Services":
         indicateur = ["Nombre de licenciés sportifs",
                       "Nombre de cinémas",
-                      "Part de la surface couverte en 4G",
-                      "Nombre d'équipements sportifs et culturels (gamme de proximité)",
-                      "Nombre d'équipements sportifs et culturels (gamme intermédiaire)",
-                      "Nombre d'équipements sportifs et culturels (gamme supérieure)",
-                      "Nombre de structures France Services",
-                      "Nombre de lieux délivrant des services Pôle Emploi"]
-        
-
-    elif selected_domaine =="Météo":
-        indicateur = ['Température',
-                      'Température minimale',
-                      'Température maximale',
-                      "Taux d'humidité",
-                      'Précipitations',
-                      'Vitesse du vent moyen']
-
+                      "Nombre de structures France Services"]
 
     selected_indicateur = st.sidebar.selectbox('Choisir un indicateur', indicateur)
-    data = data1[[selected_indicateur,'Latitude','Longitude','Département','Geo Shape']]
+    data = data1[[selected_indicateur,'Latitude','Longitude','Ville']]
+    
 
     if selected_indicateur =="Nombre de structures France Services":
         data['Catégorie'], bins =  pd.qcut(data[selected_indicateur].rank(method='first'), 3, retbins=True, labels=False)
@@ -240,27 +228,36 @@ def main():
 
     data["Catégorie"] = data["Catégorie"].astype(str)
 
+    purpose_colour = {
+        '0': '#55E2E9',
+        '1': '#0496C7',
+        '2': '#02367B'
+    }
+
     categ = st.sidebar.radio('Répartition',('Tous',quantile_ranges[0],quantile_ranges[1],quantile_ranges[2]))
+
 
 
     if versus:
         col1, col2 = st.columns(2)
 
         with col1:
-            ville1 = st.selectbox("Choisissez un département", departements, key='ville1')
+            ville1 = st.selectbox("Choisissez une ville", villes, key='ville1')
             if ville1=="France":
                 center1, zoom1, ville_data1, rad1 = France(df)
                 zoom1=5
+
             else:
                 center1, zoom1, ville_data1, rad1 = Ville(df, ville1)
 
             map1 = folium.Map(location=center1, zoom_start=zoom1, control_scale=True)
 
         with col2:
-            ville2 = st.selectbox("Choisissez un département", departements, key='ville2')
+            ville2 = st.selectbox("Choisissez une ville", villes, key='ville2')
             if ville2=="France":
                 center2, zoom2, ville_data2, rad2 = France(df)
                 zoom2=5
+
             else:
                 center2, zoom2, ville_data2, rad2 = Ville(df, ville2)
 
@@ -269,7 +266,7 @@ def main():
 
 
     else:
-        ville = st.selectbox("Choisissez un département", departements, key='ville')
+        ville = st.selectbox("Choisissez une ville", villes, key='ville')
         if ville=="France":
             center, zoom, ville_data, rad = France(df)
 
@@ -303,73 +300,39 @@ def main():
     if versus:
         with col1:
             for i,row in data2.iterrows():
-                content = f'Département : {str(row["Département"])}<br>' f'{selected_indicateur} : {str(row[selected_indicateur])}'
+                content = f'Ville : {str(row["Ville"])}<br>' f'{selected_indicateur} : {str(row[selected_indicateur])}'
                 iframe = folium.IFrame(content, width=400, height=55)
                 popup = folium.Popup(iframe, min_width=400, max_width=500)
-
-                if marker:
-                    folium.Marker(location=[row['Latitude'],row['Longitude']],
-                                popup = popup).add_to(map1)
-                
-            folium.Choropleth(
-                geo_data=data_geo,
-                name="choropleth",
-                data=data2,
-                columns=["Département", selected_indicateur],
-                key_on="feature.properties.nom",
-                fill_color="YlGnBu",
-                fill_opacity=0.7,
-                line_opacity=0.2,
-                legend_name=selected_indicateur,
-            ).add_to(map1)
-            
+                        
+                try:
+                    icon_color = purpose_colour[row['Catégorie']]
+                except:
+                    icon_color = 'gray'
+                circle_marker(map1, row, rad1, icon_color, popup)
 
         with col2:
             for i,row in data2.iterrows():
-                content = f'Département : {str(row["Département"])}<br>' f'{selected_indicateur} : {str(row[selected_indicateur])}'
+                content = f'Ville : {str(row["Ville"])}<br>' f'{selected_indicateur} : {str(row[selected_indicateur])}'
                 iframe = folium.IFrame(content, width=400, height=55)
                 popup = folium.Popup(iframe, min_width=400, max_width=500)
-
-                if marker:
-                    folium.Marker(location=[row['Latitude'],row['Longitude']],
-                                popup = popup).add_to(map2)
-                
-            folium.Choropleth(
-                geo_data=data_geo,
-                name="choropleth",
-                data=data2,
-                columns=["Département", selected_indicateur],
-                key_on="feature.properties.nom",
-                fill_color="YlGnBu",
-                fill_opacity=0.7,
-                line_opacity=0.2,
-                legend_name=selected_indicateur,
-            ).add_to(map2)
-            
-
+                        
+                try:
+                    icon_color = purpose_colour[row['Catégorie']]
+                except:
+                    icon_color = 'gray'
+                circle_marker(map2, row, rad2, icon_color, popup)
     else:
         for i,row in data2.iterrows():
-            content = f'Département : {str(row["Département"])}<br>' f'{selected_indicateur} : {str(row[selected_indicateur])}'
+            content = f'Ville : {str(row["Ville"])}<br>' f'{selected_indicateur} : {str(row[selected_indicateur])}'
             iframe = folium.IFrame(content, width=400, height=55)
             popup = folium.Popup(iframe, min_width=400, max_width=500)
-
-            if marker:
-                    folium.Marker(location=[row['Latitude'],row['Longitude']],
-                                popup = popup).add_to(map)
-
-        folium.Choropleth(
-            geo_data=data_geo,
-            name="choropleth",
-            data=data2,
-            columns=["Département", selected_indicateur],
-            key_on="feature.properties.nom",
-            fill_color="YlGnBu",
-            fill_opacity=0.7,
-            line_opacity=0.2,
-            legend_name=selected_indicateur,
-        ).add_to(map)
-
-
+                        
+            try:
+                icon_color = purpose_colour[row['Catégorie']]
+            except:
+                icon_color = 'gray'
+            circle_marker(map, row, rad, icon_color, popup)
+    
     if versus:
         with col1:
             st_folium(map1, height=500, width=500, key='map1')
