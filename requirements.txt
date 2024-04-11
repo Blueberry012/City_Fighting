@@ -1,10 +1,5 @@
-pandas
-streamlit
-folium
-streamlit_folium
-simplejson
-statistics
-matplotlib
-requests
-Python-IO
-os-sys
+pandas==2.2.1
+streamlit==1.32.2
+streamlit-folium==0.18.0
+matplotlib==3.8.4
+folium==0.16.0
